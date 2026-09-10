@@ -1,15 +1,15 @@
 POST http://localhost:5000/api/admin/registrations/save
 // Register a new admin User
 {
-    "name": "dinesh",
-    "email": "dinesh@gmail.com",
-    "password": "Admin@123"
+    "name": "Admin",
+    "email": "admin@malajangamcommunity.com",
+    "password": "4xBDMtn1G2A9"
 }
 
 POST http://localhost:5000/api/admin/login
 // Admin Credientials Validation 
 // Resposen : JWT Token 
 {
-    "email": "dinesh@gmail.com",
-    "password": "Admin@123"
+    "email": "admin@malajangamcommunity.com",
+    "password": "4xBDMtn1G2A9"
 }

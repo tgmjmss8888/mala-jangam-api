@@ -185,7 +185,8 @@ class RegistrationRepository {
       return { message: "OTP validation is disabled. Use static OTP." };
     }
 
-    const result = await this.sendOtp(mobileNumber);
+    const normalized = this.normalizeMobileNumber(mobileNumber);
+    const result = await this.sendOtp(normalized);
 
     if (!result) {
       throw new Error("Failed to send OTP");
@@ -203,6 +204,7 @@ class RegistrationRepository {
 
         if (response.data && response.data.Status === "Success") {
           const sessionId = response.data.Details;
+          // store using normalized mobile number to ensure consistent lookup later
           await MobileVerification.findOneAndUpdate(
             { mobileNumber },
             { sessionId },
@@ -214,7 +216,7 @@ class RegistrationRepository {
         }
       } catch (error) {
         if (attempts === 0) {
-          console.error('Final OTP Error:', error);
+          console.error('Final OTP Error:', error.response?.data || error.message || error);
           return null;
         }
       }
@@ -222,7 +224,8 @@ class RegistrationRepository {
   }
   async checkOtp(phoneNumber, codeFromUser) {
     try {
-      const verificationRecord = await MobileVerification.findOne({ mobileNumber: phoneNumber });
+      const normalized = this.normalizeMobileNumber(phoneNumber);
+      const verificationRecord = await MobileVerification.findOne({ mobileNumber: normalized });
       if (!verificationRecord || !verificationRecord.sessionId) {
         console.log('No OTP session found.');
         return false;
@@ -235,7 +238,7 @@ class RegistrationRepository {
       if (response.data && response.data.Status === "Success" && response.data.Details === "OTP Matched") {
         console.log('User Verified Successfully!');
         // Optional: clear the session
-        await MobileVerification.deleteOne({ mobileNumber: phoneNumber });
+        await MobileVerification.deleteOne({ mobileNumber: normalized });
         return true;
       } else {
         console.log('Invalid OTP.', response.data);
@@ -248,7 +251,8 @@ class RegistrationRepository {
   }
   async verifyOTP(mobileNumber, otp) {
     console.log("Signing token with mobileNumber:", mobileNumber);
-    const token = this.generateTokenWithMobileNumber(mobileNumber);
+    const normalized = this.normalizeMobileNumber(mobileNumber);
+    const token = this.generateTokenWithMobileNumber(normalized);
 
     if (process.env.OTP_VALIDATION_ENABLED === 'false') {
       if (otp === process.env.STATIC_OTP) {
@@ -256,11 +260,21 @@ class RegistrationRepository {
       }
       return { message: "Invalid OTP" };
     }
-
-    if (await this.checkOtp(mobileNumber, otp)) {
+    if (await this.checkOtp(normalized, otp)) {
       return { token };
     }
     return { message: "Invalid OTP" };
+  }
+
+  // Normalize mobile number to include country code (India: 91) without +
+  normalizeMobileNumber(mobileNumber) {
+    if (!mobileNumber) return mobileNumber;
+    const cleaned = String(mobileNumber).replace(/[^0-9]/g, "");
+    if (cleaned.length === 10) {
+      return `91${cleaned}`;
+    }
+    // if already includes country code like 919xxxxx or +91xxxx, return cleaned without +
+    return cleaned;
   }
 
   generateTokenWithMobileNumber(mobileNumber) {
