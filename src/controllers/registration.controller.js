@@ -4,6 +4,9 @@ const connectDB = require("../config/db");
 const { getR2Client } = require("../config/r2");
 const { PutObjectCommand } = require("@aws-sdk/client-s3");
 
+const isDocumentUploadEnabled = () => process.env.DOCUMENT_UPLOAD_ENABLED === "true";
+
+exports.isDocumentUploadEnabled = isDocumentUploadEnabled;
 
 exports.create = async (req, res) => {
   try {
@@ -17,6 +20,10 @@ exports.create = async (req, res) => {
       }
     }
     if (req.file) {
+      if (!isDocumentUploadEnabled()) {
+        return res.status(403).json({ message: "Document upload is disabled on this server." });
+      }
+
       try {
         const client = getR2Client();
         const bucketName = process.env.R2_BUCKET_NAME;
