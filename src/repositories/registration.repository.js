@@ -126,8 +126,11 @@ class RegistrationRepository {
     console.log("Validating token for mobile number:", mobileNumber);
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      if (decoded.mobileNumber === mobileNumber) {
-        console.log("mobile number verification successful for:", mobileNumber);
+      // Normalize the provided mobile number before comparison so formats (91-prefixed vs 10-digit)
+      // do not cause false negatives.
+      const normalizedProvided = this.normalizeMobileNumber(mobileNumber);
+      if (decoded.mobileNumber === normalizedProvided) {
+        console.log("mobile number verification successful for:", normalizedProvided);
         return decoded.mobileNumber;
       }
     } catch (err) {
