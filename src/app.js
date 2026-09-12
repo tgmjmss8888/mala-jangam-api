@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 
 const allowedOrigins = [
-  'https://www.malajangam.in/'
+  'https://www.malajangam.in'
 ];
 
 app.use(
